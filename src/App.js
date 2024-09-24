@@ -29,7 +29,7 @@ const App = () => {
     return errorFunc(str);
   };
 
-  const generateFakeData = useCallback((region, errorCount, seed, page) => {
+  const generateFakeData = useCallback(() => {
     if (seed) fakerEN_US.seed(parseInt(seed) + page);
     const generatedData = [];
     let faker;
@@ -77,13 +77,14 @@ const App = () => {
       });
     }
 
-    setData(prevData => [...prevData, ...generatedData]);
+    setData(generatedData);
     setLoading(false);
-  }, []);
+  }, [region, errorCount, seed, page]); // Добавлены все необходимые зависимости
 
   useEffect(() => {
-    generateFakeData(region, errorCount, seed, page);
-  }, [region, errorCount, seed, page, generateFakeData]);
+    setLoading(true);
+    generateFakeData();
+  }, [generateFakeData]); // Теперь только generateFakeData как зависимость
 
   const handleScroll = () => {
     const { scrollTop, scrollHeight, clientHeight } = tableRef.current;
