@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fakerEN_US, fakerRU, fakerKA_GE } from '@faker-js/faker';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { Parser } from 'json2csv';
 
 const App = () => {
   const [region, setRegion] = useState('en_US');
@@ -13,18 +14,21 @@ const App = () => {
 
   const applyRandomError = (str) => {
     const errors = [
-      (s) => s.slice(0, Math.floor(Math.random() * s.length)) + s.slice(Math.floor(Math.random() * s.length) + 1),
       (s) => {
-        const charToAdd = String.fromCharCode(Math.floor(Math.random() * 26) + 97);
+        const pos = Math.floor(Math.random() * s.length);
+        return s.slice(0, pos) + s.slice(pos + 1); // Удаление символа
+      },
+      (s) => {
+        const charToAdd = String.fromCharCode(Math.floor(Math.random() * 26) + 97); // Добавление случайного символа
         const pos = Math.floor(Math.random() * (s.length + 1));
         return s.slice(0, pos) + charToAdd + s.slice(pos);
       },
       (s) => {
         const pos = Math.floor(Math.random() * (s.length - 1));
-        return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2);
+        return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2); // Перестановка символов
       }
     ];
-    
+
     const errorFunc = errors[Math.floor(Math.random() * errors.length)];
     return errorFunc(str);
   };
@@ -66,45 +70,54 @@ const App = () => {
           location = `${faker.location.streetAddress()}, ${faker.location.city()}`;
       }
 
-      const errors = Math.floor(Math.random() * (errorCount + 1));
-      const personWithErrors = Array.from({ length: errors }, () => applyRandomError(person)).reduce((acc, curr) => curr, person);
+      const errors = Math.floor(errorCount);
+      let personWithErrors = person;
+      for (let j = 0; j < errors; j++) {
+        personWithErrors = applyRandomError(personWithErrors);
+      }
+
       generatedData.push({
         id: faker.string.uuid(),
         person: personWithErrors,
         location,
         phone: region === 'ru_RU' ? faker.phone.number('7##########') : region === 'ka_GE' ? faker.phone.number('9955########') : faker.phone.number(),
-        errors,
+        errors: errors,
       });
     }
 
-    setData(generatedData);
+    setData((prevData) => [...prevData, ...generatedData]);
     setLoading(false);
-  }, [region, errorCount, seed, page]); // Добавлены все необходимые зависимости
+  }, [region, errorCount, seed, page]);
 
   useEffect(() => {
-    setLoading(true);
-    generateFakeData();
-  }, [generateFakeData]); // Теперь только generateFakeData как зависимость
+    generateFakeData(); // Генерация данных при первом входе
+  }, [generateFakeData]);
+
+  useEffect(() => {
+    if (loading) {
+      generateFakeData();
+    }
+  }, [loading, generateFakeData]);
 
   const handleScroll = () => {
     const { scrollTop, scrollHeight, clientHeight } = tableRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 5 && !loading) {
       setLoading(true);
-      setPage(prevPage => prevPage + 1);
+      setPage((prevPage) => prevPage + 1);
     }
   };
 
   const handleRegionChange = (event) => {
     setRegion(event.target.value);
-    setData([]);
-    setPage(1);
+    setData([]); // Сброс данных
+    setPage(1); // Сброс страницы
   };
 
   const handleErrorCountChange = (event) => {
     const value = parseFloat(event.target.value);
     setErrorCount(value);
-    setData([]);
-    setPage(1);
+    setData([]); // Сброс данных
+    setPage(1); // Сброс страницы
   };
 
   const handleSeedChange = (event) => {
@@ -115,63 +128,79 @@ const App = () => {
     setSeed(Math.floor(Math.random() * 1000));
   };
 
+  const exportToCSV = () => {
+    try {
+      const parser = new Parser();
+      const csv = parser.parse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'data.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Ошибка при экспорте данных:', error);
+    }
+  };
+
   return (
-    <div className="container mt-5">
+    <div className="container mt-3">
       <h1 className="text-center">Генератор фейковых данных</h1>
-      <div className="mb-3">
-        <label className="form-label">Регион:</label>
-        <select className="form-select" value={region} onChange={handleRegionChange}>
+      <div className="d-flex align-items-center mb-3">
+        <label className="form-label me-2">Регион:</label>
+        <select className="form-select me-3" value={region} onChange={handleRegionChange}>
           <option value="en_US">США</option>
           <option value="ru_RU">Россия</option>
           <option value="ka_GE">Грузия</option>
         </select>
       </div>
 
-      <div className="mb-3">
-        <label className="form-label">Количество ошибок:</label>
+      <div className="d-flex align-items-center mb-3">
+        <label className="form-label me-2">Количество ошибок:</label>
         <input
           type="range"
           min="0"
           max="10"
-          step="1"
+          step="0.25"
           value={errorCount}
           onChange={handleErrorCountChange}
-          className="form-range"
+          className="me-2"
         />
-        <span>{errorCount}</span>
         <input
           type="number"
-          className="form-control mt-2"
+          className="form-control mt-2 me-2"
           min="0"
           max="1000"
-          step="1"
+          step="0.25"
           value={errorCount}
           onChange={handleErrorCountChange}
-          placeholder="Введите количество ошибок"
         />
       </div>
 
-      <div className="mb-3">
-        <label className="form-label">Seed:</label>
-        <div className="input-group">
-          <input
-            type="number"
-            className="form-control"
-            value={seed}
-            onChange={handleSeedChange}
-            placeholder="Введите seed"
-          />
-          <button className="btn btn-secondary" onClick={generateRandomSeed}>
-            Случайный
-          </button>
-        </div>
+      <div className="d-flex align-items-center mb-3">
+        <label className="form-label me-2">Сид:</label>
+        <input
+          type="number"
+          className="form-control me-2"
+          value={seed}
+          onChange={handleSeedChange}
+        />
+        <button className="btn btn-secondary mt-2" onClick={generateRandomSeed}>
+          Сгенерировать сид
+        </button>
       </div>
 
-      <div ref={tableRef} onScroll={handleScroll} style={{ maxHeight: '400px', overflowY: 'auto' }}>
-        <table className="table table-striped">
-          <thead className="table-dark">
+      <button className="btn btn-primary" onClick={generateFakeData}>
+        Сгенерировать данные
+      </button>
+
+      <div ref={tableRef} className="table-responsive" onScroll={handleScroll} style={{ height: '400px', overflowY: 'scroll', border: '1px solid #ddd', marginTop: '20px' }}>
+        <table className="table table-bordered">
+          <thead>
             <tr>
-              <th>Номер</th>
               <th>ID</th>
               <th>Имя</th>
               <th>Адрес</th>
@@ -180,9 +209,8 @@ const App = () => {
             </tr>
           </thead>
           <tbody>
-            {data.map((item, index) => (
+            {data.map((item) => (
               <tr key={item.id}>
-                <td>{index + 1}</td>
                 <td>{item.id}</td>
                 <td>{item.person}</td>
                 <td>{item.location}</td>
@@ -190,14 +218,14 @@ const App = () => {
                 <td>{item.errors}</td>
               </tr>
             ))}
-            {loading && (
-              <tr>
-                <td colSpan="6" className="text-center">Загрузка...</td>
-              </tr>
-            )}
           </tbody>
         </table>
+        {loading && <div>Загрузка...</div>}
       </div>
+
+      <button className="btn btn-success mt-3" onClick={exportToCSV}>
+        Экспорт в CSV
+      </button>
     </div>
   );
 };
