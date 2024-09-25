@@ -5,18 +5,18 @@ import { Parser } from 'json2csv';
 
 const App = () => {
   const [region, setRegion] = useState('en_US');
-  const [data, setData] = useState([]);
-  const [errorCount, setErrorCount] = useState(0);
-  const [seed, setSeed] = useState('');
+  const [data, setData] = useState([]); 
+  const [errorCount, setErrorCount] = useState(0); 
+  const [seed, setSeed] = useState(0); 
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); 
   const tableRef = useRef(null);
-  const serialNumber = useRef(1); 
+  const serialNumber = useRef(1);
 
   const applyRandomError = (str) => {
     const errors = [
       (s) => s.slice(0, Math.floor(Math.random() * s.length)) + s.slice(Math.floor(Math.random() * s.length) + 1), 
-      (s) => s.slice(0, Math.floor(Math.random() * (s.length + 1))) + String.fromCharCode(Math.floor(Math.random() * 26) + 97) + s.slice(Math.floor(Math.random() * (s.length + 1))), // Добавление случайного символа
+      (s) => s.slice(0, Math.floor(Math.random() * (s.length + 1))) + String.fromCharCode(Math.floor(Math.random() * 26) + 97) + s.slice(Math.floor(Math.random() * (s.length + 1))), // Вставка символа
       (s) => {
         const pos = Math.floor(Math.random() * (s.length - 1));
         return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2); 
@@ -26,7 +26,8 @@ const App = () => {
   };
 
   const generateFakeData = useCallback(() => {
-    if (seed) fakerEN_US.seed(parseInt(seed) + page);
+    const combinedSeed = seed + page; 
+    fakerEN_US.seed(combinedSeed); 
     const generatedData = [];
     let faker;
 
@@ -41,7 +42,7 @@ const App = () => {
         faker = fakerEN_US;
     }
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 20; i++) { 
       const gender = Math.random() < 0.5 ? 'male' : 'female';
       const firstName = gender === 'male' ? faker.person.firstName('male') : faker.person.firstName('female');
       const lastName = gender === 'male' ? faker.person.lastName('male') : faker.person.lastName('female');
@@ -80,8 +81,11 @@ const App = () => {
   }, [region, errorCount, seed, page]);
 
   useEffect(() => {
-    generateFakeData(); 
-  }, [generateFakeData]);
+    setData([]);
+    serialNumber.current = 1; 
+    setPage(1); 
+    setLoading(true);
+  }, [region, errorCount, seed]);
 
   useEffect(() => {
     if (loading) {
@@ -93,38 +97,32 @@ const App = () => {
     const { scrollTop, scrollHeight, clientHeight } = tableRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 5 && !loading) {
       setLoading(true);
-      setPage((prevPage) => prevPage + 1);
+      setPage((prevPage) => prevPage + 1); 
     }
   };
 
   const handleRegionChange = (event) => {
     setRegion(event.target.value);
-    setData([]); 
-    serialNumber.current = 1;
-    setPage(1); 
   };
 
   const handleErrorCountChange = (event) => {
     const value = parseFloat(event.target.value);
     setErrorCount(value);
-    setData([]); 
-    serialNumber.current = 1; 
-    setPage(1); 
   };
 
   const handleSeedChange = (event) => {
-    setSeed(event.target.value);
+    const value = parseInt(event.target.value, 10);
+    if (!isNaN(value) && value >= 0) {
+      setSeed(value);
+    }
   };
 
   const generateRandomSeed = () => {
-    setSeed(Math.floor(Math.random() * 1000));
+    setSeed(Math.floor(Math.random() * 1000)); 
   };
 
-  const handleGenerateClick = () => {
-    setData([]);
-    serialNumber.current = 1; 
-    setPage(1);
-    generateFakeData();
+  const resetSeed = () => {
+    setSeed(0); 
   };
 
   const exportToCSV = () => {
@@ -171,7 +169,7 @@ const App = () => {
           type="number"
           className="form-control mt-2"
           min="0"
-          max="1000"
+          max="10"
           step="0.5"
           value={errorCount}
           onChange={handleErrorCountChange}
@@ -187,13 +185,14 @@ const App = () => {
           onChange={handleSeedChange}
         />
         <button className="btn btn-secondary mt-2" onClick={generateRandomSeed}>
-          Сгенерировать сид
+          Сгенерировать случайный сид
+        </button>
+        <button className="btn btn-warning mt-2 ms-2" onClick={resetSeed}>
+          Вернуться к сид 0
         </button>
       </div>
 
-      <button className="btn btn-primary" onClick={handleGenerateClick}>
-        Сгенерировать данные
-      </button>
+      {loading && <div className="mt-3">Загрузка данных...</div>}
 
       <div
         ref={tableRef}
@@ -227,8 +226,8 @@ const App = () => {
         </table>
       </div>
 
-      <button className="btn btn-secondary mt-3" onClick={exportToCSV}>
-        Экспорт в CSV
+      <button className="btn btn-success mt-3" onClick={exportToCSV}>
+        Экспортировать в CSV
       </button>
     </div>
   );
