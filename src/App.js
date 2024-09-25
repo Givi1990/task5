@@ -11,26 +11,18 @@ const App = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const tableRef = useRef(null);
+  const serialNumber = useRef(1); // Сохранение порядкового номера
 
   const applyRandomError = (str) => {
     const errors = [
-      (s) => {
-        const pos = Math.floor(Math.random() * s.length);
-        return s.slice(0, pos) + s.slice(pos + 1); // Удаление символа
-      },
-      (s) => {
-        const charToAdd = String.fromCharCode(Math.floor(Math.random() * 26) + 97); // Добавление случайного символа
-        const pos = Math.floor(Math.random() * (s.length + 1));
-        return s.slice(0, pos) + charToAdd + s.slice(pos);
-      },
+      (s) => s.slice(0, Math.floor(Math.random() * s.length)) + s.slice(Math.floor(Math.random() * s.length) + 1), // Удаление символа
+      (s) => s.slice(0, Math.floor(Math.random() * (s.length + 1))) + String.fromCharCode(Math.floor(Math.random() * 26) + 97) + s.slice(Math.floor(Math.random() * (s.length + 1))), // Добавление случайного символа
       (s) => {
         const pos = Math.floor(Math.random() * (s.length - 1));
         return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2); // Перестановка символов
       }
     ];
-
-    const errorFunc = errors[Math.floor(Math.random() * errors.length)];
-    return errorFunc(str);
+    return errors[Math.floor(Math.random() * errors.length)](str);
   };
 
   const generateFakeData = useCallback(() => {
@@ -51,17 +43,14 @@ const App = () => {
 
     for (let i = 0; i < 20; i++) {
       const gender = Math.random() < 0.5 ? 'male' : 'female';
-      const firstName = gender === 'male' ? faker.person.firstName("male") : faker.person.firstName("female");
-      const lastName = gender === 'male' ? faker.person.lastName("male") : faker.person.lastName("female");
+      const firstName = gender === 'male' ? faker.person.firstName('male') : faker.person.firstName('female');
+      const lastName = gender === 'male' ? faker.person.lastName('male') : faker.person.lastName('female');
       const person = `${firstName} ${lastName}`;
 
       let location;
       switch (region) {
         case 'ru_RU':
-          const street = faker.location.street();
-          const house = faker.string.numeric(2);
-          const apartment = faker.string.numeric(3);
-          location = `${faker.location.city()}, ${street}, д. ${house}, кв. ${apartment}`;
+          location = `${faker.location.city()}, ${faker.location.street()}, д. ${faker.string.numeric(2)}, кв. ${faker.string.numeric(3)}`;
           break;
         case 'ka_GE':
           location = `${faker.location.city()}, ${faker.location.streetAddress()}`;
@@ -77,6 +66,7 @@ const App = () => {
       }
 
       generatedData.push({
+        serial: serialNumber.current++, // Увеличение порядкового номера
         id: faker.string.uuid(),
         person: personWithErrors,
         location,
@@ -110,6 +100,7 @@ const App = () => {
   const handleRegionChange = (event) => {
     setRegion(event.target.value);
     setData([]); // Сброс данных
+    serialNumber.current = 1; // Сброс порядкового номера
     setPage(1); // Сброс страницы
   };
 
@@ -117,6 +108,7 @@ const App = () => {
     const value = parseFloat(event.target.value);
     setErrorCount(value);
     setData([]); // Сброс данных
+    serialNumber.current = 1; // Сброс порядкового номера
     setPage(1); // Сброс страницы
   };
 
@@ -126,6 +118,13 @@ const App = () => {
 
   const generateRandomSeed = () => {
     setSeed(Math.floor(Math.random() * 1000));
+  };
+
+  const handleGenerateClick = () => {
+    setData([]);
+    serialNumber.current = 1; // Сброс порядкового номера
+    setPage(1);
+    generateFakeData();
   };
 
   const exportToCSV = () => {
@@ -149,42 +148,41 @@ const App = () => {
   return (
     <div className="container mt-3">
       <h1 className="text-center">Генератор фейковых данных</h1>
-      <div className="d-flex align-items-center mb-3">
-        <label className="form-label me-2">Регион:</label>
-        <select className="form-select me-3" value={region} onChange={handleRegionChange}>
+      <div className="mb-3">
+        <label className="form-label">Регион:</label>
+        <select className="form-select" value={region} onChange={handleRegionChange}>
           <option value="en_US">США</option>
           <option value="ru_RU">Россия</option>
           <option value="ka_GE">Грузия</option>
         </select>
       </div>
 
-      <div className="d-flex align-items-center mb-3">
-        <label className="form-label me-2">Количество ошибок:</label>
+      <div className="mb-3">
+        <label className="form-label">Количество ошибок:</label>
         <input
           type="range"
           min="0"
           max="10"
-          step="0.25"
+          step="0.5"
           value={errorCount}
           onChange={handleErrorCountChange}
-          className="me-2"
         />
         <input
           type="number"
-          className="form-control mt-2 me-2"
+          className="form-control mt-2"
           min="0"
           max="1000"
-          step="0.25"
+          step="0.5"
           value={errorCount}
           onChange={handleErrorCountChange}
         />
       </div>
 
-      <div className="d-flex align-items-center mb-3">
-        <label className="form-label me-2">Сид:</label>
+      <div className="mb-3">
+        <label className="form-label">Сид:</label>
         <input
           type="number"
-          className="form-control me-2"
+          className="form-control"
           value={seed}
           onChange={handleSeedChange}
         />
@@ -193,14 +191,20 @@ const App = () => {
         </button>
       </div>
 
-      <button className="btn btn-primary" onClick={generateFakeData}>
+      <button className="btn btn-primary" onClick={handleGenerateClick}>
         Сгенерировать данные
       </button>
 
-      <div ref={tableRef} className="table-responsive" onScroll={handleScroll} style={{ height: '400px', overflowY: 'scroll', border: '1px solid #ddd', marginTop: '20px' }}>
+      <div
+        ref={tableRef}
+        className="table-responsive"
+        onScroll={handleScroll}
+        style={{ height: '400px', overflowY: 'scroll', border: '1px solid #ddd', marginTop: '20px' }}
+      >
         <table className="table table-bordered">
           <thead>
             <tr>
+              <th>Номер</th>
               <th>ID</th>
               <th>Имя</th>
               <th>Адрес</th>
@@ -211,6 +215,7 @@ const App = () => {
           <tbody>
             {data.map((item) => (
               <tr key={item.id}>
+                <td>{item.serial}</td>
                 <td>{item.id}</td>
                 <td>{item.person}</td>
                 <td>{item.location}</td>
@@ -220,10 +225,9 @@ const App = () => {
             ))}
           </tbody>
         </table>
-        {loading && <div>Загрузка...</div>}
       </div>
 
-      <button className="btn btn-success mt-3" onClick={exportToCSV}>
+      <button className="btn btn-secondary mt-3" onClick={exportToCSV}>
         Экспорт в CSV
       </button>
     </div>
