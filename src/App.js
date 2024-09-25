@@ -11,15 +11,15 @@ const App = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const tableRef = useRef(null);
-  const serialNumber = useRef(1); // Сохранение порядкового номера
+  const serialNumber = useRef(1); 
 
   const applyRandomError = (str) => {
     const errors = [
-      (s) => s.slice(0, Math.floor(Math.random() * s.length)) + s.slice(Math.floor(Math.random() * s.length) + 1), // Удаление символа
+      (s) => s.slice(0, Math.floor(Math.random() * s.length)) + s.slice(Math.floor(Math.random() * s.length) + 1), 
       (s) => s.slice(0, Math.floor(Math.random() * (s.length + 1))) + String.fromCharCode(Math.floor(Math.random() * 26) + 97) + s.slice(Math.floor(Math.random() * (s.length + 1))), // Добавление случайного символа
       (s) => {
         const pos = Math.floor(Math.random() * (s.length - 1));
-        return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2); // Перестановка символов
+        return s.slice(0, pos) + s.charAt(pos + 1) + s.charAt(pos) + s.slice(pos + 2); 
       }
     ];
     return errors[Math.floor(Math.random() * errors.length)](str);
@@ -66,7 +66,7 @@ const App = () => {
       }
 
       generatedData.push({
-        serial: serialNumber.current++, // Увеличение порядкового номера
+        serial: serialNumber.current++, 
         id: faker.string.uuid(),
         person: personWithErrors,
         location,
@@ -80,7 +80,7 @@ const App = () => {
   }, [region, errorCount, seed, page]);
 
   useEffect(() => {
-    generateFakeData(); // Генерация данных при первом входе
+    generateFakeData(); 
   }, [generateFakeData]);
 
   useEffect(() => {
@@ -99,17 +99,17 @@ const App = () => {
 
   const handleRegionChange = (event) => {
     setRegion(event.target.value);
-    setData([]); // Сброс данных
-    serialNumber.current = 1; // Сброс порядкового номера
-    setPage(1); // Сброс страницы
+    setData([]); 
+    serialNumber.current = 1;
+    setPage(1); 
   };
 
   const handleErrorCountChange = (event) => {
     const value = parseFloat(event.target.value);
     setErrorCount(value);
-    setData([]); // Сброс данных
-    serialNumber.current = 1; // Сброс порядкового номера
-    setPage(1); // Сброс страницы
+    setData([]); 
+    serialNumber.current = 1; 
+    setPage(1); 
   };
 
   const handleSeedChange = (event) => {
@@ -122,7 +122,7 @@ const App = () => {
 
   const handleGenerateClick = () => {
     setData([]);
-    serialNumber.current = 1; // Сброс порядкового номера
+    serialNumber.current = 1; 
     setPage(1);
     generateFakeData();
   };
